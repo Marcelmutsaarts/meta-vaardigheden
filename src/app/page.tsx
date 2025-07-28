@@ -1,204 +1,299 @@
-import TestChatBot from '@/components/TestChatBot'
-import CopyButton from '@/components/CopyButton'
-import Image from 'next/image'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import EnhancedFileUpload from '@/components/EnhancedFileUpload'
+
+interface TeacherOptions {
+  teacherName?: string
+  assignmentName?: string
+  educationLevel: string
+  interactionMode: 'text' | 'voice'
+  enableFeedbackBot: boolean
+  feedbackCriteria?: any
+}
+
+interface FileMetadata {
+  name: string
+  tokenCount: number
+  content: string
+}
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-6">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          
-          <h1 className="text-5xl font-bold text-gray-800 mb-4">
-            Vibe Coding Template
-          </h1>
-          
-          <p className="text-xl text-purple-700 font-medium mb-6">
-            Dit is een template om met Bolt te werken waarbij we gebruik maken van Gemini. Dit template is gemaakt door Tom Naberink
-          </p>
+  const router = useRouter()
+  const [uploadedContent, setUploadedContent] = useState<{ content: string; tokenCount: number } | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<FileMetadata | null>(null)
+  const [contextText, setContextText] = useState('')
+  const [feedbackFile, setFeedbackFile] = useState<any>(null)
+  const [feedbackFileData, setFeedbackFileData] = useState<FileMetadata | null>(null)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  
+  const [options, setOptions] = useState<TeacherOptions>({
+    educationLevel: 'HBO',
+    interactionMode: 'text',
+    enableFeedbackBot: false
+  })
 
-          {/* AI voor Docenten Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="bg-white rounded-lg shadow-lg p-4">
-              <Image 
-                src="/images/ai-voor-docenten-logo.png" 
-                alt="AI voor Docenten Logo" 
-                width={192} 
-                height={96}
-                className="rounded-lg"
-              />
+  // Load saved data from sessionStorage on mount
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('learningEnvironmentData')
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        
+        // Restore all form data
+        if (parsed.uploadedFile) {
+          setUploadedFile(parsed.uploadedFile)
+          setUploadedContent({
+            content: parsed.uploadedFile.content,
+            tokenCount: parsed.uploadedFile.tokenCount
+          })
+        }
+        
+        setContextText(parsed.contextText || '')
+        setOptions(parsed.options || {
+          educationLevel: 'HBO',
+          interactionMode: 'text',
+          enableFeedbackBot: false
+        })
+        
+        if (parsed.feedbackFileData) {
+          setFeedbackFileData(parsed.feedbackFileData)
+          setFeedbackFile({
+            content: parsed.feedbackFileData.content,
+            filename: parsed.feedbackFileData.name
+          })
+        }
+        
+        setFeedbackText(parsed.feedbackText || '')
+      } catch (error) {
+        console.error('Error loading saved data:', error)
+      }
+    }
+  }, [])
+
+  const handleFileUpload = (result: any) => {
+    if (result.success && result.content) {
+      setUploadedContent({
+        content: result.content,
+        tokenCount: result.tokenCount
+      })
+      setUploadedFile({
+        name: result.filename || 'Bestand',
+        tokenCount: result.tokenCount,
+        content: result.content
+      })
+    } else if (!result.success && !result.content) {
+      setUploadedContent(null)
+      setUploadedFile(null)
+    }
+  }
+
+  const handleFeedbackFileUpload = (result: any) => {
+    if (result.success && result.content) {
+      setFeedbackFile(result)
+      setFeedbackFileData({
+        name: result.filename || 'Beoordelingskader',
+        tokenCount: result.tokenCount,
+        content: result.content
+      })
+    } else if (!result.success && !result.content) {
+      setFeedbackFile(null)
+      setFeedbackFileData(null)
+    }
+  }
+
+  const handleGenerateLearningEnvironment = async () => {
+    if (!uploadedContent && !contextText.trim()) {
+      alert('Upload een bestand of voeg context toe voordat je verder gaat.')
+      return
+    }
+
+    setIsGenerating(true)
+    
+    // Store data in sessionStorage for the learning environment
+    const sessionData = {
+      uploadedContent: uploadedContent?.content || '',
+      uploadedFile: uploadedFile,
+      contextText,
+      options,
+      feedbackCriteria: feedbackFile?.content || '',
+      feedbackText,
+      feedbackFileData: feedbackFileData,
+      isTestEnvironment: true
+    }
+    
+    sessionStorage.setItem('learningEnvironmentData', JSON.stringify(sessionData))
+    
+    // Navigate to learning environment
+    router.push('/leeromgeving')
+  }
+
+  return (
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-12 animate-fade-in-up">
+          <h1 className="text-hero mb-4">Meta-Vaardigheden</h1>
+          <p className="text-subtitle">Leeromgeving Generator</p>
+          <p className="text-motto">Creëer gepersonaliseerde leeromgevingen voor vaardigheidstraining</p>
+        </div>
+
+        {/* Upload Section */}
+        <div className="mb-8 animate-fade-in-up animate-delay-1">
+          <h2 className="text-heading text-2xl mb-4">Upload Lesmateriaal</h2>
+          <EnhancedFileUpload 
+            onFileUpload={handleFileUpload}
+            maxTokens={20000}
+          />
+        </div>
+
+        {/* Context Text Area */}
+        <div className="mb-8 animate-fade-in-up animate-delay-2">
+          <h2 className="text-heading text-2xl mb-4">Context & Toelichting</h2>
+          <div className="card">
+            <textarea
+              className="form-input min-h-[150px] resize-y"
+              placeholder="Geef hier aanvullende context of instructies voor de leeromgeving..."
+              value={contextText}
+              onChange={(e) => setContextText(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Options Panel */}
+        <div className="mb-8 animate-fade-in-up animate-delay-3">
+          <h2 className="text-heading text-2xl mb-4">Instellingen</h2>
+          <div className="card space-y-6">
+            {/* Teacher and Assignment Names */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Naam Docent (optioneel)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Bijvoorbeeld: Dhr. Jansen"
+                  value={options.teacherName || ''}
+                  onChange={(e) => setOptions({...options, teacherName: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="form-label">Naam Opdracht (optioneel)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Bijvoorbeeld: Presentatievaardigheden"
+                  value={options.assignmentName || ''}
+                  onChange={(e) => setOptions({...options, assignmentName: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Education Level */}
+            <div>
+              <label className="form-label">Onderwijsniveau</label>
+              <select
+                className="form-input"
+                value={options.educationLevel}
+                onChange={(e) => setOptions({...options, educationLevel: e.target.value})}
+              >
+                <option value="PO">Primair Onderwijs (PO)</option>
+                <option value="VM">Voortgezet Onderwijs - VMBO</option>
+                <option value="VWO">Voortgezet Onderwijs - VWO</option>
+                <option value="MBO">Middelbaar Beroepsonderwijs (MBO)</option>
+                <option value="HBO">Hoger Beroepsonderwijs (HBO)</option>
+                <option value="UNI">Universiteit (WO)</option>
+              </select>
+            </div>
+
+            {/* Interaction Mode */}
+            <div>
+              <label className="form-label">Interactiemodus</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="interactionMode"
+                    value="text"
+                    checked={options.interactionMode === 'text'}
+                    onChange={(e) => setOptions({...options, interactionMode: 'text'})}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent)' }}
+                  />
+                  <span className="text-body">Tekst</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                  <input
+                    type="radio"
+                    name="interactionMode"
+                    value="voice"
+                    checked={options.interactionMode === 'voice'}
+                    onChange={(e) => setOptions({...options, interactionMode: 'voice'})}
+                    className="w-4 h-4"
+                    disabled
+                    style={{ accentColor: 'var(--accent)' }}
+                  />
+                  <span className="text-body">Spraak (komt binnenkort)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Feedback Bot */}
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="toggle">
+                  <input
+                    type="checkbox"
+                    className="toggle-input"
+                    checked={options.enableFeedbackBot}
+                    onChange={(e) => setOptions({...options, enableFeedbackBot: e.target.checked})}
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
+                <span className="text-body">Feedbackbot inschakelen</span>
+              </label>
+              
+              {options.enableFeedbackBot && (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="form-label">Beoordelingscriteria (tekst)</label>
+                    <textarea
+                      className="form-input min-h-[120px] resize-y"
+                      placeholder="Beschrijf hier de beoordelingscriteria voor de feedbackbot..."
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Of upload een beoordelingskader</label>
+                    <EnhancedFileUpload 
+                      onFileUpload={handleFeedbackFileUpload}
+                      maxTokens={10000}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          
-          {/* Setup Instructions */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-bold text-purple-800 mb-6 flex items-center">
-              <span className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                🔧
-              </span>
-              Setup Instructies
-            </h2>
-            
-            <div className="space-y-6">
-              
-              {/* Step 1 - Fork GitHub Template */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 1: Fork dit template in GitHub
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Ga naar <a href="https://github.com" target="_blank" className="text-purple-600 hover:text-purple-800 underline">github.com</a> en login in. Ga dan naar deze pagina: <a href="https://github.com/TomNaberink/apitemplateTom" target="_blank" className="text-purple-600 hover:text-purple-800 underline">https://github.com/TomNaberink/apitemplateTom</a>
-                </p>
-                <p className="text-gray-600 mb-3">
-                  Klik rechtsbovenin op '<strong>Use this template</strong>', geef het een gepaste naam voor je project en klik op '<strong>create fork</strong>'.
-                </p>
-                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-400">GitHub Repository URL</span>
-                    <CopyButton 
-                      text="https://github.com/TomNaberink/apitemplateTom"
-                      className="text-purple-400 hover:text-purple-300 text-xs transition-colors"
-                      title="Kopieer GitHub URL"
-                    />
-                  </div>
-                  <code>https://github.com/TomNaberink/apitemplateTom</code>
-                </div>
-              </div>
-
-              {/* Step 2 - Import from GitHub in Bolt */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 2: Import in Bolt.new
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Open <a href="https://bolt.new" target="_blank" className="text-purple-600 hover:text-purple-800 underline">Bolt.new</a> en login. Selecteer '<strong>import from github</strong>' en login op GitHub. Kies dan de '<strong>repository</strong>' die je net hebt geforkt.
-                </p>
-              </div>
-
-              {/* Step 3 - Create .env.local */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 3: Maak een .env.local bestand
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Als het template is geladen ga je naar het <strong>tabblad "Code"</strong>. Bij de files doe je <strong>rechtermuisknop</strong> en klik je op <strong>"New File"</strong>. Die noem je <code className="bg-gray-100 px-2 py-1 rounded text-sm">.env.local</code>. Daar binnen zet je het volgende:
-                </p>
-                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
-                  <div className="flex items-center justify-end mb-2">
-                    <CopyButton 
-                      text="GEMINI_API_KEY=your_actual_api_key_here"
-                      className="text-purple-400 hover:text-purple-300 text-xs transition-colors"
-                      title="Kopieer .env.local inhoud"
-                    />
-                  </div>
-                  <code>GEMINI_API_KEY=your_actual_api_key_here</code>
-                </div>
-                <p className="text-orange-600 text-sm mt-2 font-medium">
-                  ⚠️ Vervang "your_actual_api_key_here" met je echte API key! (zie stap 3)
-                </p>
-              </div>
-
-              {/* Step 4 - Get API Key */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 4: Verkrijg een Gemini API Key
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Ga naar Google AI Studio om je gratis API key aan te maken:
-                </p>
-                <a 
-                  href="https://makersuite.google.com/app/apikey" 
-                  target="_blank"
-                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <span>Verkrijg API Key</span>
-                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-                
-                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-orange-800 text-sm">
-                    ⚠️ <strong>Let op</strong>, je kunt gratis en risicovrij oefenen met de Gemini API. Daarnaast kun je 300,- dollar gratis budget krijgen. Als dat op, dan moet je het koppelen aan je creditcard. Zorg ervoor dat je weet wat je doet op dat moment!
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 5 - Enhanced Test Step */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 5: Test je API Key & Alle Features
-                </h3>
-                <TestChatBot />
-              </div>
-
-              {/* Step 6 - Build Step */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 6: Bouwen maar!
-                </h3>
-                <p className="text-gray-600">
-                  Er staat veel informatie in de <code className="bg-gray-100 px-2 py-1 rounded text-sm">README.md</code>, maar je mag ook lekker gaan viben! Wat ga jij maken om het onderwijs te verbeteren?
-                </p>
-              </div>
-
-              {/* Step 7 - Deploy with Vercel */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 7: Deploy met Vercel
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Ga naar <a href="https://vercel.com" target="_blank" className="text-purple-600 hover:text-purple-800 underline">Vercel.com</a>, login en koppel je Github. Klik op <strong>'Add New'</strong> en importeer de Github die je net hebt gemaakt binnen Bolt. <strong className="text-red-600">KLIK NOG NIET OP DEPLOY</strong>. Eerst moet je de <strong>'Environment Variable'</strong> instellen:
-                </p>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-3">
-                  <p className="text-yellow-800 text-sm mb-2">
-                    ⚙️ <strong>Environment Variables instellen:</strong>
-                  </p>
-                  <ul className="text-yellow-700 text-sm space-y-1">
-                    <li>• Bij <strong>'Key'</strong> vul je <code className="bg-yellow-100 px-1 rounded">GEMINI_API_KEY</code> in</li>
-                    <li>• Bij <strong>'Value'</strong> vul je je echte API key in</li>
-                    <li>• Klik dan pas op <strong>'Deploy'</strong></li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Step 8 - Test and Share */}
-              <div className="border-l-4 border-purple-500 pl-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Stap 8: Testen en delen
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  🎉 <strong>Gefeliciteerd!</strong> Je AI-tool is nu live op het internet. Test alles zorgvuldig voordat je het deelt!
-                </p>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-green-800 text-sm">
-                    🌟 <strong>Tijd om te delen!</strong> Laat je collega's, studenten of vrienden zien wat je hebt gebouwd. Wie weet inspireer je anderen om ook te gaan experimenteren met AI in het onderwijs! 🚀
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center mt-12">
-            <div className="inline-flex items-center space-x-4 text-purple-600">
-              <span>💜</span>
-              <span>Veel succes met bouwen!</span>
-              <span>💜</span>
-            </div>
-            <p className="text-gray-500 text-sm mt-2">
-              Vibe Coding Template door Tom Naberink • Powered by Bolt, Next.js & Gemini AI
-            </p>
-          </div>
+        {/* Generate Button */}
+        <div className="text-center">
+          <button
+            onClick={handleGenerateLearningEnvironment}
+            disabled={isGenerating || (!uploadedContent && !contextText.trim())}
+            className="btn btn-primary text-lg px-12 py-4"
+          >
+            {isGenerating ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⚡</span>
+                Leeromgeving wordt gegenereerd...
+              </>
+            ) : (
+              'Genereer Leeromgeving'
+            )}
+          </button>
         </div>
       </div>
     </div>
