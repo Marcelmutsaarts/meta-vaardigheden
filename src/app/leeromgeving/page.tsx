@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import VoiceChatInterface from '@/components/VoiceChatInterface'
 
 interface SessionData {
   uploadedContent: string
@@ -12,6 +13,11 @@ interface SessionData {
     educationLevel: string
     interactionMode: 'text' | 'voice'
     enableFeedbackBot: boolean
+    voiceSettings?: {
+      aiVoice: string
+      speechSpeed: number
+      emotionStyle: string
+    }
   }
   feedbackCriteria: string
   feedbackText: string
@@ -315,84 +321,97 @@ export default function LeeromgevingPage() {
 
         {/* Chat Container */}
         <div className="card" style={{ minHeight: '70vh' }}>
-          {/* Role Indicators */}
-          <div className="flex justify-center gap-4 mb-6">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full" 
-                 style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-sm">Student</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full"
-                 style={{ backgroundColor: 'rgba(162, 93, 248, 0.1)', border: '1px solid rgba(162, 93, 248, 0.3)' }}>
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent)' }}></span>
-              <span className="text-sm">AI Assistent</span>
-            </div>
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto mb-4" style={{ maxHeight: '50vh' }}>
-            {!chatStarted ? (
-              <div className="flex flex-col items-center justify-center h-full">
-                <button
-                  onClick={startChat}
-                  className="btn btn-primary text-xl px-8 py-4"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Laden...' : 'Start Gesprek'}
-                </button>
+          {sessionData.options.interactionMode === 'voice' ? (
+            /* Voice Mode Interface */
+            <VoiceChatInterface
+              sessionData={sessionData}
+              chatStarted={chatStarted}
+              onStartChat={startChat}
+              isLoading={isLoading}
+            />
+          ) : (
+            /* Text Mode Interface */
+            <>
+              {/* Role Indicators */}
+              <div className="flex justify-center gap-4 mb-6">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full" 
+                     style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="text-sm">Student</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full"
+                     style={{ backgroundColor: 'rgba(162, 93, 248, 0.1)', border: '1px solid rgba(162, 93, 248, 0.3)' }}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent)' }}></span>
+                  <span className="text-sm">AI Assistent</span>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'student' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] p-4 rounded-lg ${
-                      msg.role === 'student' 
-                        ? 'bg-green-500/10 border border-green-500/30' 
-                        : 'bg-accent/10 border border-accent/30'
-                    }`}>
-                      <p className="text-body whitespace-pre-wrap">{msg.content}</p>
-                      <span className="text-xs text-muted mt-2 block">
-                        {msg.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto mb-4" style={{ maxHeight: '50vh' }}>
+                {!chatStarted ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <button
+                      onClick={startChat}
+                      className="btn btn-primary text-xl px-8 py-4"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Laden...' : 'Start Gesprek'}
+                    </button>
                   </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-accent/10 border border-accent/30 p-4 rounded-lg">
-                      <div className="flex gap-2">
-                        <span className="animate-bounce">•</span>
-                        <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>•</span>
-                        <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>•</span>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'student' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[70%] p-4 rounded-lg ${
+                          msg.role === 'student' 
+                            ? 'bg-green-500/10 border border-green-500/30' 
+                            : 'bg-accent/10 border border-accent/30'
+                        }`}>
+                          <p className="text-body whitespace-pre-wrap">{msg.content}</p>
+                          <span className="text-xs text-muted mt-2 block">
+                            {msg.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-accent/10 border border-accent/30 p-4 rounded-lg">
+                          <div className="flex gap-2">
+                            <span className="animate-bounce">•</span>
+                            <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>•</span>
+                            <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>•</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
 
-          {/* Input Area */}
-          {chatStarted && (
-            <div className="flex gap-3">
-              <input
-                type="text"
-                className="form-input flex-1"
-                placeholder="Type je bericht..."
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                disabled={isLoading}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={isLoading || !inputMessage.trim()}
-                className="btn btn-primary"
-              >
-                Verstuur
-              </button>
-            </div>
+              {/* Input Area */}
+              {chatStarted && (
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    className="form-input flex-1"
+                    placeholder="Type je bericht..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    disabled={isLoading}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={isLoading || !inputMessage.trim()}
+                    className="btn btn-primary"
+                  >
+                    Verstuur
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

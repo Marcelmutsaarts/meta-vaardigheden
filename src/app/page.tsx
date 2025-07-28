@@ -11,6 +11,11 @@ interface TeacherOptions {
   interactionMode: 'text' | 'voice'
   enableFeedbackBot: boolean
   feedbackCriteria?: any
+  voiceSettings?: {
+    aiVoice: string
+    speechSpeed: number
+    emotionStyle: string
+  }
 }
 
 interface FileMetadata {
@@ -32,7 +37,12 @@ export default function Home() {
   const [options, setOptions] = useState<TeacherOptions>({
     educationLevel: 'HBO',
     interactionMode: 'text',
-    enableFeedbackBot: false
+    enableFeedbackBot: false,
+    voiceSettings: {
+      aiVoice: 'Achird', 
+      speechSpeed: 1.0,
+      emotionStyle: 'Neutraal'
+    }
   })
 
   // Load saved data from sessionStorage on mount
@@ -55,7 +65,13 @@ export default function Home() {
         setOptions(parsed.options || {
           educationLevel: 'HBO',
           interactionMode: 'text',
-          enableFeedbackBot: false
+          enableFeedbackBot: false,
+          voiceSettings: {
+            studentVoice: 'Kore',
+            aiVoice: 'Charon',
+            speechSpeed: 1.0,
+            emotionStyle: 'Neutraal'
+          }
         })
         
         if (parsed.feedbackFileData) {
@@ -223,7 +239,7 @@ export default function Home() {
                   />
                   <span className="text-body">Tekst</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="interactionMode"
@@ -231,13 +247,79 @@ export default function Home() {
                     checked={options.interactionMode === 'voice'}
                     onChange={(e) => setOptions({...options, interactionMode: 'voice'})}
                     className="w-4 h-4"
-                    disabled
                     style={{ accentColor: 'var(--accent)' }}
                   />
-                  <span className="text-body">Spraak (komt binnenkort)</span>
+                  <span className="text-body">Spraak</span>
                 </label>
               </div>
             </div>
+
+            {/* Voice Settings */}
+            {options.interactionMode === 'voice' && (
+              <div className="p-4 bg-accent/5 rounded-lg border border-accent/20">
+                <h3 className="form-label text-lg mb-4">Spraak Instellingen</h3>
+                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400 mb-1">🎙️ Volledig Spraakgesprek</p>
+                  <p className="text-xs text-muted">Student spreekt in microfoon, AI antwoordt met spraak. Geen tekst zichtbaar tijdens gesprek.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">AI Assistent Stem</label>
+                    <select
+                      className="form-input"
+                      value={options.voiceSettings?.aiVoice || 'Achird'}
+                      onChange={(e) => setOptions({
+                        ...options,
+                        voiceSettings: { ...options.voiceSettings!, aiVoice: e.target.value }
+                      })}
+                    >
+                      <option value="Achird">David (Man - Vriendelijk)</option>
+                      <option value="Despina">Emma (Vrouw - Professioneel)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Emotie Stijl</label>
+                    <select
+                      className="form-input"
+                      value={options.voiceSettings?.emotionStyle || 'Neutraal'}
+                      onChange={(e) => setOptions({
+                        ...options,
+                        voiceSettings: { ...options.voiceSettings!, emotionStyle: e.target.value }
+                      })}
+                    >
+                      <option value="Neutraal">Neutraal</option>
+                      <option value="Professioneel">Professioneel</option>
+                      <option value="Vriendelijk">Vriendelijk</option>
+                      <option value="Informatief">Informatief</option>
+                      <option value="Kalm">Kalm</option>
+                      <option value="Enthousiast">Enthousiast</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Spraaksnelheid</label>
+                    <select
+                      className="form-input"
+                      value={options.voiceSettings?.speechSpeed || 1.0}
+                      onChange={(e) => setOptions({
+                        ...options,
+                        voiceSettings: { ...options.voiceSettings!, speechSpeed: parseFloat(e.target.value) }
+                      })}
+                    >
+                      <option value={0.8}>Langzaam (0.8x)</option>
+                      <option value={1.0}>Normaal (1.0x)</option>
+                      <option value={1.2}>Snel (1.2x)</option>
+                      <option value={1.5}>Zeer snel (1.5x)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-accent/10 rounded-lg">
+                  <p className="text-sm text-muted">
+                    💡 <strong>Tip:</strong> In spraak modus voer je gesprekken door te praten in plaats van te typen. 
+                    De AI reageert ook met spraak.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Feedback Bot */}
             <div>
