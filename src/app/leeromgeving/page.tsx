@@ -15,7 +15,6 @@ interface SessionData {
     enableFeedbackBot: boolean
     voiceSettings?: {
       aiVoice: string
-      speechSpeed: number
       emotionStyle: string
     }
   }
@@ -42,6 +41,7 @@ export default function LeeromgevingPage() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackHistory, setFeedbackHistory] = useState<ChatMessage[]>([])
   const [caseDescription, setCaseDescription] = useState('')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,6 +50,12 @@ export default function LeeromgevingPage() {
     if (data) {
       const parsed = JSON.parse(data)
       setSessionData(parsed)
+      
+      // Reset chat state if explicitly requested in session data
+      if (parsed.chatStarted === false) {
+        setChatStarted(false)
+        setMessages(parsed.messages || [])
+      }
       
       // Load case description if not already loaded
       if (!parsed.caseDescription) {
@@ -61,6 +67,20 @@ export default function LeeromgevingPage() {
       router.push('/')
     }
   }, [router])
+
+  // Theme toggle functionality
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' || 'dark'
+    setTheme(savedTheme)
+    document.documentElement.setAttribute('data-theme', savedTheme)
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
 
   const loadCaseDescription = async (sessionData: SessionData) => {
     try {
@@ -262,11 +282,14 @@ export default function LeeromgevingPage() {
         </button>
         
         <button
-          className="floating-btn opacity-50 cursor-not-allowed"
-          title="Dark/Light Mode (komt binnenkort)"
-          disabled
+          onClick={toggleTheme}
+          className="floating-btn group relative"
+          title={`Schakel naar ${theme === 'dark' ? 'licht' : 'donker'} thema`}
         >
-          <span className="text-2xl">🌙</span>
+          <span className="text-2xl">{theme === 'dark' ? '🌙' : '☀️'}</span>
+          <span className="absolute left-full ml-2 px-2 py-1 bg-card rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-sm">
+            {theme === 'dark' ? 'Licht thema' : 'Donker thema'}
+          </span>
         </button>
         
         {sessionData.isTestEnvironment && (
@@ -452,37 +475,92 @@ export default function LeeromgevingPage() {
         </div>
       )}
 
-      {/* Feedback Panel */}
+      {/* Feedback Modal */}
       {showFeedback && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-card border-l border-accent/30 shadow-xl z-40 flex flex-col">
-          <div className="p-6 border-b border-accent/30 flex justify-between items-center">
-            <h2 className="text-heading text-xl">Feedback</h2>
-            <button
-              onClick={() => setShowFeedback(false)}
-              className="text-muted hover:text-body transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-4">
-              {feedbackHistory.map((feedback, idx) => (
-                <div key={idx} className="p-4 bg-accent/5 rounded-lg border border-accent/20">
-                  <p className="text-body whitespace-pre-wrap">{feedback.content}</p>
-                  <span className="text-xs text-muted mt-2 block">
-                    {feedback.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+        <div className="modal-overlay" onClick={() => setShowFeedback(false)}>
+          <div className="modal-content p-0 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="p-6 border-b border-accent/30 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                  <span className="text-lg">💬</span>
                 </div>
-              ))}
+                <h2 className="text-heading text-xl">AI Feedback</h2>
+              </div>
+              <button
+                onClick={() => setShowFeedback(false)}
+                className="modal-close"
+                title="Feedback sluiten"
+              >
+                ✕
+              </button>
             </div>
-          </div>
-          <div className="p-4 border-t border-accent/30">
-            <button
-              onClick={requestFeedback}
-              className="btn btn-secondary w-full"
-            >
-              Nieuwe Feedback Aanvragen
-            </button>
+
+            {/* Feedback Content */}
+            <div className="flex-1 max-h-96 overflow-y-auto p-6">
+              {feedbackHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
+                    <span className="text-2xl">🤖</span>
+                  </div>
+                  <p className="text-muted mb-4">Nog geen feedback beschikbaar</p>
+                  <p className="text-sm text-muted">Vraag feedback aan om je voortgang te bespreken</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {feedbackHistory.map((feedback, idx) => (
+                    <div key={idx} className="p-4 bg-accent/5 rounded-lg border border-accent/20 hover:border-accent/40 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-sm">🎯</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-body whitespace-pre-wrap leading-relaxed">{feedback.content}</p>
+                          <div className="flex justify-between items-center mt-3 pt-3 border-t border-accent/10">
+                            <span className="text-xs text-muted">
+                              Feedback #{idx + 1}
+                            </span>
+                            <span className="text-xs text-muted">
+                              {feedback.timestamp.toLocaleTimeString('nl-NL', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                day: '2-digit',
+                                month: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-accent/30 bg-accent/2">
+              <div className="flex gap-3">
+                <button
+                  onClick={requestFeedback}
+                  disabled={messages.length === 0}
+                  className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+                >
+                  <span className="text-lg">🔄</span>
+                  Nieuwe Feedback Aanvragen
+                </button>
+                <button
+                  onClick={() => setShowFeedback(false)}
+                  className="btn btn-secondary px-6"
+                >
+                  Sluiten
+                </button>
+              </div>
+              {messages.length === 0 && (
+                <p className="text-xs text-muted mt-2 text-center">
+                  Start eerst een gesprek om feedback te kunnen aanvragen
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

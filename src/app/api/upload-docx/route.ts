@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 
+// Force Node.js runtime for PDF processing
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -38,15 +41,49 @@ export async function POST(request: NextRequest) {
       textContent = result.value
       fileType = 'Word Document (.docx)'
     } else if (isPdf) {
-      // Extract text from .pdf using pdf-parse with dynamic import
+      // Extract text from PDF using pdf-parse
       try {
         const pdfParse = (await import('pdf-parse')).default
         const pdfData = await pdfParse(buffer)
         textContent = pdfData.text
         fileType = 'PDF Document (.pdf)'
+        
+        // Check if extraction was successful
+        if (!textContent || textContent.trim().length < 10) {
+          // If extraction failed or produced very little text, provide fallback
+          textContent = `[PDF bestand gedetecteerd: ${file.name}]
+
+PDF tekstextractie heeft weinig of geen tekst opgeleverd. Dit kan komen door:
+- Gescande documenten (afbeeldingen in plaats van tekst)
+- Complexe opmaak of embedded content
+- Beveiligingsinstellingen op het PDF
+
+BELANGRIJK: Voeg de belangrijkste inhoud van dit PDF document toe in het "Aanvullende context" veld hieronder. Dit zorgt ervoor dat de AI-assistent relevante en accurate oefensituaties kan creëren.
+
+Tip: Open het PDF bestand, kopieer de relevante tekst, en plak deze in het context veld voor optimale resultaten.`
+          
+          fileType = 'PDF Document (.pdf) - Handmatige invoer aanbevolen'
+        }
+        
       } catch (pdfError) {
         console.error('PDF parsing error:', pdfError)
-        return NextResponse.json({ error: 'Fout bij het lezen van het PDF bestand' }, { status: 400 })
+        
+        // Fallback: provide instructions for manual input
+        textContent = `[PDF bestand gedetecteerd: ${file.name}]
+
+PDF tekstextractie is niet mogelijk voor dit bestand. Dit kan komen door:
+- Beschadigd of ongeldig PDF formaat
+- Beveiligingsinstellingen
+- Niet-ondersteunde PDF versie
+
+Om dit document te gebruiken:
+1. Open het PDF bestand in een PDF reader
+2. Kopieer de relevante tekst
+3. Plak de tekst in het "Aanvullende context" veld hieronder
+
+Of converteer het bestand naar .docx formaat voor automatische verwerking.`
+        
+        fileType = 'PDF Document (.pdf) - Handmatige invoer vereist'
       }
     } else if (isCsv) {
       // Parse CSV file

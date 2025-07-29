@@ -13,7 +13,6 @@ interface TeacherOptions {
   feedbackCriteria?: any
   voiceSettings?: {
     aiVoice: string
-    speechSpeed: number
     emotionStyle: string
   }
 }
@@ -39,11 +38,11 @@ export default function Home() {
     interactionMode: 'text',
     enableFeedbackBot: false,
     voiceSettings: {
-      aiVoice: 'Achird', 
-      speechSpeed: 1.0,
-      emotionStyle: 'Neutraal'
+      aiVoice: 'Achird',
+      emotionStyle: 'friendly'
     }
   })
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   // Load saved data from sessionStorage on mount
   useEffect(() => {
@@ -67,10 +66,8 @@ export default function Home() {
           interactionMode: 'text',
           enableFeedbackBot: false,
           voiceSettings: {
-            studentVoice: 'Kore',
-            aiVoice: 'Charon',
-            speechSpeed: 1.0,
-            emotionStyle: 'Neutraal'
+            aiVoice: 'Achird',
+            emotionStyle: 'friendly'
           }
         })
         
@@ -88,6 +85,20 @@ export default function Home() {
       }
     }
   }, [])
+
+  // Theme toggle functionality
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' || 'dark'
+    setTheme(savedTheme)
+    document.documentElement.setAttribute('data-theme', savedTheme)
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
 
   const handleFileUpload = (result: any) => {
     if (result.success && result.content) {
@@ -129,6 +140,7 @@ export default function Home() {
     setIsGenerating(true)
     
     // Store data in sessionStorage for the learning environment
+    // This creates a fresh session, resetting any existing chat state
     const sessionData = {
       uploadedContent: uploadedContent?.content || '',
       uploadedFile: uploadedFile,
@@ -137,7 +149,11 @@ export default function Home() {
       feedbackCriteria: feedbackFile?.content || '',
       feedbackText,
       feedbackFileData: feedbackFileData,
-      isTestEnvironment: true
+      isTestEnvironment: true,
+      // Force fresh start - reset any existing chat state
+      chatStarted: false,
+      messages: [],
+      caseDescription: undefined // Force re-generation
     }
     
     sessionStorage.setItem('learningEnvironmentData', JSON.stringify(sessionData))
@@ -148,6 +164,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* Theme Toggle - Top Left */}
+      <div className="fixed left-4 top-4 z-50">
+        <button
+          onClick={toggleTheme}
+          className="floating-btn group relative"
+          title={`Schakel naar ${theme === 'dark' ? 'licht' : 'donker'} thema`}
+        >
+          <span className="text-2xl">{theme === 'dark' ? '🌙' : '☀️'}</span>
+          <span className="absolute left-full ml-2 px-2 py-1 bg-card rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-sm">
+            {theme === 'dark' ? 'Licht thema' : 'Donker thema'}
+          </span>
+        </button>
+      </div>
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12 animate-fade-in-up">
@@ -162,6 +192,7 @@ export default function Home() {
           <EnhancedFileUpload 
             onFileUpload={handleFileUpload}
             maxTokens={20000}
+            initialFile={uploadedFile}
           />
         </div>
 
@@ -278,37 +309,24 @@ export default function Home() {
                     </select>
                   </div>
                   <div>
-                    <label className="form-label">Emotie Stijl</label>
+                    <label className="form-label">Spreekstijl</label>
                     <select
                       className="form-input"
-                      value={options.voiceSettings?.emotionStyle || 'Neutraal'}
+                      value={options.voiceSettings?.emotionStyle || 'friendly'}
                       onChange={(e) => setOptions({
                         ...options,
                         voiceSettings: { ...options.voiceSettings!, emotionStyle: e.target.value }
                       })}
                     >
-                      <option value="Neutraal">Neutraal</option>
-                      <option value="Professioneel">Professioneel</option>
-                      <option value="Vriendelijk">Vriendelijk</option>
-                      <option value="Informatief">Informatief</option>
-                      <option value="Kalm">Kalm</option>
-                      <option value="Enthousiast">Enthousiast</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="form-label">Spraaksnelheid</label>
-                    <select
-                      className="form-input"
-                      value={options.voiceSettings?.speechSpeed || 1.0}
-                      onChange={(e) => setOptions({
-                        ...options,
-                        voiceSettings: { ...options.voiceSettings!, speechSpeed: parseFloat(e.target.value) }
-                      })}
-                    >
-                      <option value={0.8}>Langzaam (0.8x)</option>
-                      <option value={1.0}>Normaal (1.0x)</option>
-                      <option value={1.2}>Snel (1.2x)</option>
-                      <option value={1.5}>Zeer snel (1.5x)</option>
+                      <option value="happy">Vrolijk</option>
+                      <option value="sad">Somber</option>
+                      <option value="excited">Opgewonden</option>
+                      <option value="calm">Kalm</option>
+                      <option value="serious">Serieus</option>
+                      <option value="dramatic">Dramatisch</option>
+                      <option value="friendly">Vriendelijk</option>
+                      <option value="formal">Formeel</option>
+                      <option value="casual">Ontspannen</option>
                     </select>
                   </div>
                 </div>
@@ -352,6 +370,7 @@ export default function Home() {
                     <EnhancedFileUpload 
                       onFileUpload={handleFeedbackFileUpload}
                       maxTokens={10000}
+                      initialFile={feedbackFileData}
                     />
                   </div>
                 </div>
@@ -378,6 +397,7 @@ export default function Home() {
           </button>
         </div>
       </div>
+
     </div>
   )
 }

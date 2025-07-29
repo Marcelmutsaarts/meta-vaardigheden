@@ -420,6 +420,42 @@ body {
   }
 }
 
+/* Theme Toggle Integration with Floating Buttons */
+.floating-btn-wrapper button {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  background: var(--bg-card) !important;
+  border: 2px solid var(--accent) !important;
+  color: var(--accent) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 4px 12px rgba(162, 93, 248, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.floating-btn-wrapper button:hover {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent-bright) !important;
+  color: var(--accent-bright) !important;
+  transform: translateY(-3px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(162, 93, 248, 0.4) !important;
+}
+
+.floating-btn-wrapper button:active {
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.floating-btn-wrapper button svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .floating-actions {
@@ -440,5 +476,90 @@ body {
   .floating-btn {
     width: 44px;
     height: 44px;
+  }
+}
+
+/* Modal System */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: modalFadeIn 0.3s ease-out;
+  padding: var(--space-md);
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glow-purple), 0 25px 50px rgba(0, 0, 0, 0.5);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal Close Button */
+.modal-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.modal-close:hover {
+  color: var(--fg-base);
+  background: rgba(162, 93, 248, 0.1);
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: var(--space-sm);
+  }
+  
+  .modal-content {
+    max-height: 95vh;
+    width: 100%;
+    margin: 0;
   }
 } 

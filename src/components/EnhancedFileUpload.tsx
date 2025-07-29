@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 interface FileUploadResult {
   success: boolean
@@ -16,13 +16,19 @@ interface FileUploadResult {
 interface EnhancedFileUploadProps {
   onFileUpload: (result: FileUploadResult & { tokenCount: number }) => void
   maxTokens?: number
+  initialFile?: { name: string; tokenCount: number } | null
 }
 
-export default function EnhancedFileUpload({ onFileUpload, maxTokens = 20000 }: EnhancedFileUploadProps) {
+export default function EnhancedFileUpload({ onFileUpload, maxTokens = 20000, initialFile = null }: EnhancedFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState<{ name: string; tokenCount: number } | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; tokenCount: number } | null>(initialFile)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Update uploadedFile when initialFile prop changes
+  useEffect(() => {
+    setUploadedFile(initialFile)
+  }, [initialFile])
 
   // Estimate tokens (roughly 4 characters per token)
   const estimateTokens = (text: string): number => {

@@ -6,7 +6,13 @@
       "Bash(npm run dev:*)",
       "Bash(taskkill:*)",
       "Bash(npx kill-port:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(del test-pdf-upload.js)",
+      "Bash(npm uninstall:*)",
+      "Bash(true)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
